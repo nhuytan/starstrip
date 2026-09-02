@@ -2,6 +2,7 @@ package turnConTest.com.turn;
 
 import java.net.URISyntaxException;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -73,13 +74,15 @@ public class MyResource {
 			employee = EmployeeDAO.getEmployee();
 			if (employee.size() == 0) {
 				Connection con = null;
-				Statement stmt = null;
 				try {
 					con = DBUtil.getConnection();
 					LocalDateTime checkIn = Instant.now().atZone(ZoneId.of("US/Central")).toLocalDateTime();
 					String formattedDate = dtfL.format(checkIn);
-					stmt = con.createStatement();
-					ResultSet rs = stmt.executeQuery("SELECT vl from dataturn where datet=\'" + formattedDate + "\'");
+					PreparedStatement pstmt = con.prepareStatement(
+							"SELECT vl FROM dataturn WHERE datet = ? AND salonID = ?");
+					pstmt.setString(1, formattedDate);
+					pstmt.setString(2, DBUtil.getSalonId());
+					ResultSet rs = pstmt.executeQuery();
 					employee = EmployeeDAO.clearEmployee();
 					if (rs.next()) {
 						Object obj = new JSONParser().parse(rs.getString(1));
@@ -130,7 +133,6 @@ public class MyResource {
 			employee = EmployeeDAO.getEmployee();
 			if (employee.size() == 0) {
 				Connection con = null;
-				Statement stmt = null;
 				try {
 					con = DBUtil.getConnection();
 					
@@ -145,8 +147,11 @@ public class MyResource {
 					/*DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yy:MM:dd HH:mm:ss");
 					LocalDateTime working = LocalDateTime.parse(formattedDate + " " + seting.getDaily(), formatter);*/
 					
-					stmt = con.createStatement();
-					ResultSet rs = stmt.executeQuery("SELECT vl from dataturn where datet=\'" + formattedDate + "\'");
+					PreparedStatement pstmt = con.prepareStatement(
+							"SELECT vl FROM dataturn WHERE datet = ? AND salonID = ?");
+					pstmt.setString(1, formattedDate);
+					pstmt.setString(2, DBUtil.getSalonId());
+					ResultSet rs = pstmt.executeQuery();
 					employee = EmployeeDAO.clearEmployee();
 					if (rs.next()) {
 						Object obj = new JSONParser().parse(rs.getString(1));
@@ -220,13 +225,15 @@ public class MyResource {
 				return "{\"error\": \"oldPassNotCorrect\"}";
 			}
 			Connection con = null;
-			Statement stmt = null;
 			try {
 				con = DBUtil.getConnection();
-				stmt = con.createStatement();
-				stmt.executeUpdate("INSERT INTO turnSetting (name, value) VALUES ('admin','2608') "
-						+ "ON CONFLICT (name) DO UPDATE SET value = " + "'" + newPass + "'");
-				
+				PreparedStatement pstmt = con.prepareStatement(
+						"INSERT INTO turnSetting (salonID, name, value) VALUES (?, 'admin', ?) " +
+						"ON CONFLICT (salonID, name) DO UPDATE SET value = EXCLUDED.value");
+				pstmt.setString(1, DBUtil.getSalonId());
+				pstmt.setString(2, newPass);
+				pstmt.executeUpdate();
+
 				seting.setPass(newPass);
 			} catch (URISyntaxException e) { // TODO Auto-generated catch block
 				e.printStackTrace();
@@ -255,12 +262,14 @@ public class MyResource {
 		if (checkL == 1) {
 			
 			Connection con = null;
-			Statement stmt = null;
 			try {
 				con = DBUtil.getConnection();
-				stmt = con.createStatement();
-				stmt.executeUpdate("INSERT INTO turnSetting (name, value) VALUES ('role','1') "
-						+ "ON CONFLICT (name) DO UPDATE SET value = " + "'" + role + "'");
+				PreparedStatement pstmt = con.prepareStatement(
+						"INSERT INTO turnSetting (salonID, name, value) VALUES (?, 'role', ?) " +
+						"ON CONFLICT (salonID, name) DO UPDATE SET value = EXCLUDED.value");
+				pstmt.setString(1, DBUtil.getSalonId());
+				pstmt.setString(2, role);
+				pstmt.executeUpdate();
 				seting.setSecurity(role);
 			} catch (URISyntaxException e) { // TODO Auto-generated catch block
 				e.printStackTrace();
@@ -299,11 +308,12 @@ public class MyResource {
 	
 	private  void getSetting() {
 		Connection con = null;
-		Statement stmt = null;
 		try {
 			con = DBUtil.getConnection();
-			stmt = con.createStatement();
-			ResultSet rs = stmt.executeQuery("SELECT name, value from turnSetting");
+			PreparedStatement pstmt = con.prepareStatement(
+					"SELECT name, value FROM turnSetting WHERE salonID = ?");
+			pstmt.setString(1, DBUtil.getSalonId());
+			ResultSet rs = pstmt.executeQuery();
 			String name = "";
 			while (rs.next()) {
 				name = rs.getString("name");
@@ -354,11 +364,13 @@ public class MyResource {
 			String formattedDate = dtfL.format(checkIn);
 			if (employee.size() == 0) {
 				Connection con = null;
-				Statement stmt = null;
 				try {
 					con = DBUtil.getConnection();
-					stmt = con.createStatement();
-					ResultSet rs = stmt.executeQuery("SELECT vl from dataturn where datet=\'" + formattedDate + "\'");
+					PreparedStatement pstmt = con.prepareStatement(
+							"SELECT vl FROM dataturn WHERE datet = ? AND salonID = ?");
+					pstmt.setString(1, formattedDate);
+					pstmt.setString(2, DBUtil.getSalonId());
+					ResultSet rs = pstmt.executeQuery();
 					employee = EmployeeDAO.clearEmployee();
 					if (rs.next()) {
 						Object obj = new JSONParser().parse(rs.getString(1));
@@ -693,12 +705,14 @@ public class MyResource {
 		LocalDateTime checkIn = Instant.now().atZone(ZoneId.of("US/Central")).toLocalDateTime();
 		String formattedDate = dtfL.format(checkIn);
 		Connection con = null;
-		Statement stmt = null;
 		try {
 			con = DBUtil.getConnection();
 
-			stmt = con.createStatement();
-			ResultSet rs = stmt.executeQuery("SELECT vl from dataturn where datet=\'" + id + "\'");
+			PreparedStatement pstmt = con.prepareStatement(
+					"SELECT vl FROM dataturn WHERE datet = ? AND salonID = ?");
+			pstmt.setString(1, id);
+			pstmt.setString(2, DBUtil.getSalonId());
+			ResultSet rs = pstmt.executeQuery();
 			employeeT.clear();
 			if (formattedDate.equals(id) && checkL == 1)
 				employee = EmployeeDAO.clearEmployee();
@@ -848,47 +862,6 @@ public class MyResource {
 					return -1;
 				}
 			});
-			/*
-			 * for (int i = 0; i < tmpFreeWorker.size(); i++) {
-			 * System.out.println(tmpFreeWorker.get(i).getEmpName() + "--- " +
-			 * tmpFreeWorker.get(i).getTotalTurn() + "--- " +
-			 * tmpFreeWorker.get(i).getCheckInTime()); }
-			 * System.out.println("------------------------------");
-			 */
-			/*
-			 * boolean breakF = true;66 int countLoop = 1; while (true) { breakF = true;
-			 * ArrayList<Employee> tmpFreeWorker1 = new ArrayList<Employee>();
-			 * if(tmpFreeWorker.isEmpty()) break; tmpFreeWorker1.add(tmpFreeWorker.get(0));
-			 * int breakIndex = 0; for (int i = 0; i < tmpFreeWorker.size() - 1; i++) { if
-			 * (tmpFreeWorker.get(i+1).getTotalTurn() - STEP_TURN <
-			 * tmpFreeWorker.get(i).getTotalTurn()) {
-			 * tmpFreeWorker1.add(tmpFreeWorker.get(i+1)); breakIndex++; } else break; }
-			 * for(int i =breakIndex; i>= 0; i--) tmpFreeWorker.remove(i);
-			 * Collections.sort(tmpFreeWorker1, new Comparator<Employee>() { public int
-			 * compare(Employee arg0, Employee arg1) { // TODO Auto-generated method stub if
-			 * (arg0.getCheckInTime().isBefore(arg1.getCheckInTime())) return 1; else return
-			 * -1; } }); arrOfArrEmployee.add(tmpFreeWorker1); for (int i = 0; i <
-			 * tmpFreeWorker.size(); i++) { System.out.println(countLoop + "::::::" +
-			 * tmpFreeWorker.get(i).getEmpName() + "--- " +
-			 * tmpFreeWorker.get(i).getTotalTurn() + "--- " +
-			 * tmpFreeWorker.get(i).getCheckInTime()); }
-			 * System.out.println("------------------------------"); countLoop++; if
-			 * (breakF) { break; } } arrOfArrEmployee.add(tmpFreeWorker);
-			 */
-			/*
-			 * boolean breakF = true; int countLoop = 1; while (true) { breakF = true; for
-			 * (int i = 0; i < tmpFreeWorker.size() - 1; i++) { if
-			 * (tmpFreeWorker.get(i+1).getTotalTurn() - STEP_TURN <
-			 * tmpFreeWorker.get(i).getTotalTurn()) { if
-			 * (tmpFreeWorker.get(i).getCheckInTime() .isAfter(tmpFreeWorker.get(i +
-			 * 1).getCheckInTime())) { breakF = false; Collections.swap(tmpFreeWorker, i, i
-			 * + 1); break; } } } for (int i = 0; i < tmpFreeWorker.size(); i++) {
-			 * System.out.println(countLoop + "::::::" + tmpFreeWorker.get(i).getEmpName() +
-			 * "--- " + tmpFreeWorker.get(i).getTotalTurn() + "--- " +
-			 * tmpFreeWorker.get(i).getCheckInTime()); }
-			 * System.out.println("------------------------------"); countLoop++; if
-			 * (breakF) { break; } } arrOfArrEmployee.add(tmpFreeWorker);
-			 */
 
 			int j = 1;
 			boolean breakF = true;
@@ -912,51 +885,8 @@ public class MyResource {
 				} else {
 					breakF = true;
 				}
-
-				/*
-				 * for (int i = 0; i < tmpFreeWorker.size(); i++) { System.out.println(countLoop
-				 * + "::::::" + tmpFreeWorker.get(i).getEmpName() + "--- " +
-				 * tmpFreeWorker.get(i).getTotalTurn() + "--- " +
-				 * tmpFreeWorker.get(i).getCheckInTime()); }
-				 * System.out.println("------------------------------");
-				 */
 			}
 			arrOfArrEmployee.add(tmpFreeWorker);
-
-			/*
-			 * //index group by Step_Turn int tmpIndexGroup = 1; if (tmpFreeWorker.size() >
-			 * 0) { tmpFreeWorker.get(0).setIndexGroup(tmpIndexGroup); //
-			 * System.out.println("Employee: " + tmpFreeWorker.get(0).getEmpName() + " //
-			 * total_Turn: " + tmpFreeWorker.get(0).getTotalTurn()); if
-			 * (tmpFreeWorker.size() > 1) { for (int i = 1; i < tmpFreeWorker.size(); i++) {
-			 * if ((tmpFreeWorker.get(i).getTotalTurn() - tmpFreeWorker.get(i -
-			 * 1).getTotalTurn()) >= STEP_TURN) { tmpIndexGroup++;
-			 * tmpFreeWorker.get(i).setIndexGroup(tmpIndexGroup); } else {
-			 * tmpFreeWorker.get(i).setIndexGroup(tmpIndexGroup); } //
-			 * System.out.println("Employee: " + tmpFreeWorker.get(i).getEmpName() + " //
-			 * total_Turn: " + tmpFreeWorker.get(i).getTotalTurn()); } } } //
-			 * System.out.println("\nAFTER SORT:"); // printAddr(tmpFreeWorker);
-			 * 
-			 * 
-			 * =============================================================================
-			 * ========
-			 * 
-			 * // arrOfArrEmployee = new ArrayList<ArrayList<Employee>>(tmpIndexGroup);
-			 * arrOfArrEmployee.clear(); if (tmpFreeWorker.size() > 0) { ArrayList<Employee>
-			 * tmp = new ArrayList<Employee>(); tmp.add(tmpFreeWorker.get(0)); for (int i =
-			 * 1; i < tmpFreeWorker.size(); i++) { if (tmpFreeWorker.get(i).getIndexGroup()
-			 * != tmpFreeWorker.get(i - 1).getIndexGroup()) { arrOfArrEmployee.add(tmp);
-			 * System.out.println( "Added group: " + arrOfArrEmployee.size() + " && with " +
-			 * tmp.size() + " elements"); tmp = new ArrayList<Employee>();
-			 * tmp.add(tmpFreeWorker.get(i)); } else { tmp.add(tmpFreeWorker.get(i)); } }
-			 * arrOfArrEmployee.add(tmp); System.out.println( "Added last group: " +
-			 * arrOfArrEmployee.size() + " && with " + tmp.size() + " elements"); }
-			 */
-// Create tmp array of busy worker and sort by total , index position
-// Process Busy worker array
-
-//Create tmp array of inactive and sort inactive & index  position 
-//Process Inactive worker array
 
 		}
 		if (numberBusyWorker > 0) {
@@ -1105,14 +1035,17 @@ public class MyResource {
 
 		if (!search) {
 			Connection con = null;
-			Statement stmt = null;
 			try {
 				LocalDateTime checkIn = Instant.now().atZone(ZoneId.of("US/Central")).toLocalDateTime();
 				String formattedDate = dtfL.format(checkIn);
 				con = DBUtil.getConnection();
-				stmt = con.createStatement();
-				stmt.executeUpdate("INSERT INTO dataturn (datet, vl) VALUES('" + formattedDate + "','" + s
-						+ "') ON CONFLICT (datet) DO UPDATE SET vl = '" + s + "'");
+				PreparedStatement pstmt = con.prepareStatement(
+						"INSERT INTO dataturn (salonID, datet, vl) VALUES (?, ?, ?::json) " +
+						"ON CONFLICT (salonID, datet) DO UPDATE SET vl = EXCLUDED.vl");
+				pstmt.setString(1, DBUtil.getSalonId());
+				pstmt.setString(2, formattedDate);
+				pstmt.setString(3, s);
+				pstmt.executeUpdate();
 				// stmt.executeUpdate("update dataturn set vl = \'" + s + "\' where datet = \'"
 				// + formattedDate + "\'");
 			} catch (URISyntaxException e) { // TODO Auto-generated catch block
