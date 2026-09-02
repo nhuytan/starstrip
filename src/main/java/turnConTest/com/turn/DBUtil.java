@@ -12,6 +12,14 @@ public class DBUtil {
 		String dbUrl = System.getenv("JDBC_DATABASE_URL");
 		return DriverManager.getConnection(dbUrl);
 	}
+	
+	public static String getSalonId() {
+		String salonId = System.getenv("SALON_ID");
+		if (salonId == null || salonId.isEmpty()) {
+			throw new IllegalStateException("SALON_ID env var not set for this deployment");
+		}
+		return salonId;
+	}
 /*
 public static Connection getConnection1() throws URISyntaxException, SQLException {
 	    URI dbUri = new URI(System.getenv("DATABASE_URL"));
